@@ -1,0 +1,47 @@
+version: '3'
+services:
+    app:
+        container_name: nginx_app
+        image: nginx:alpine
+        volumes:
+            - "./etc/nginx/default.conf:/etc/nginx/conf.d/default.conf"
+            - "./etc/ssl:/etc/ssl"
+            - "./public/web:/var/www/html"
+            - "./etc/nginx/default.template.conf:/etc/nginx/conf.d/default.template"
+        ports:
+            - "8050:80"    
+        command: /bin/sh -c "envsubst '$$NGINX_HOST' < /etc/nginx/conf.d/default.template > /etc/nginx/conf.d/default.conf && nginx -g 'daemon off;'"
+        restart: always
+        depends_on:
+            - php
+            - mysqldb_app
+    php:
+        container_name: php_app
+        build: 
+            context: ./public
+            dockerfile: Dockerfile
+        restart: always
+        volumes:
+            - "./etc/php/php.ini:/usr/local/etc/php/conf.d/php.ini"
+            - "./public/web:/var/www/html"
+    phpmyadmin:
+        container_name: pma_app
+        image: phpmyadmin/phpmyadmin
+        ports:
+            - '8051:80'
+        restart: always
+        environment:
+            PMA_HOST: mysqldb_app
+            PMA_PORT: 3306
+    mysqldb_app:
+        container_name: mysql_app
+        image: mysql:5.7
+        restart: always
+        environment:
+            MYSQL_DATABASE: test_database
+            MYSQL_USER: example
+            MYSQL_PASSWORD: secret2
+        ports:
+            - "3306:3306"
+        volumes:
+            - "./etc/mysql:/var/lib/mysql"
